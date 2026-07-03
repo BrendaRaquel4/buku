@@ -2509,14 +2509,14 @@ class BukuDb:
                 for id in db_id_list:
                     if is_int(id) and int(id) > 0:
                         if flag == 1:
-                            if self.append_tag_at_index(id, tags, True):
+                            if self.append_tag_at_index(int(id), tags, True):
                                 update_count += 1
                         elif flag == 2:
                             tags = parse_tags([tags])
                             self.cur.execute(query, (tags, id,))
                             update_count += self.cur.rowcount
                         else:
-                            self.delete_tag_at_index(id, tags, True)
+                            self.delete_tag_at_index(int(id), tags, True)
                             update_count += 1
                     elif '-' in id:
                         vals = [int(x) for x in id.split('-')]

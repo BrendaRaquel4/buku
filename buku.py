@@ -75,7 +75,7 @@ SKIP_MIMES = {'.pdf', '.txt'}
 PROMPTMSG = 'buku (? for help): '  # Prompt message string
 
 strip_delim = lambda s, delim=DELIM, sub=' ': str(s).replace(delim, sub)
-taglist = lambda ss: sorted({s.lower().strip() for s in ss if (s or '').strip()})
+taglist = lambda ss: sorted(set(s.lower().strip() for s in ss if (s or '').strip()))
 parse_order = lambda order: [s.strip() for ss in order for s in ss.split(',') if s.strip()]
 like_escape = lambda s, c='`': s.replace(c, c+c).replace('_', c+'_').replace('%', c+'%')
 split_by_marker = lambda s: re.split(r'\s+(?=[.:>#*])', s)
@@ -250,7 +250,7 @@ class BukuCrypt:
         except ImportError as e:
             raise RuntimeError('cryptography lib(s) missing') from e
         self._sha256, self._default_backend = sha256, default_backend
-        self._cipher, self._algorithms, self._modes = Cipher, algorithms, modes
+        self._Cipher, self._algorithms, self._modes = Cipher, algorithms, modes
         self._getpass = (getpass if sys.stdin.isatty() else (lambda: sys.stdin.readline().rstrip('\n')))
 
         if iterations < 1:
@@ -315,7 +315,7 @@ class BukuCrypt:
             raise RuntimeError(e) from e
 
     def _cipher(self, key, iv):
-        return self._cipher(self._algorithms.AES(key), self._modes.CBC(iv), backend=self._default_backend())
+        return self._Cipher(self._algorithms.AES(key), self._modes.CBC(iv), backend=self._default_backend())
 
     def _key(self, salt):
         key = ('%s%s' % (self.password, salt.decode('utf-8', 'replace'))).encode('utf-8')
@@ -2634,10 +2634,6 @@ class BukuDb:
         exported to a XBEL file.
         If destination file name ends with '.rss'/'.atom' bookmarks are
         exported to an RSS file.
-        If destination file name ends with '.csv' bookmarks are
-        exported to a CSV file (columns: url, title, tags, desc).
-        If destination file name ends with '.txt' bookmarks are
-        exported to a plain text file, one URL per line.
         Otherwise, bookmarks are exported to a Firefox bookmarks.html
         formatted file.
 
@@ -2720,14 +2716,6 @@ class BukuDb:
                 outfp.write(res['data'])
             elif filepath.endswith('.rss') or filepath.endswith('.atom'):
                 res = convert_bookmark_set(resultset, 'rss', old)
-                count += res['count']
-                outfp.write(res['data'])
-            elif filepath.endswith('.csv'):
-                res = convert_bookmark_set(resultset, 'csv', old)
-                count += res['count']
-                outfp.write(res['data'])
-            elif filepath.endswith('.txt'):
-                res = convert_bookmark_set(resultset, 'txt', old)
                 count += res['count']
                 outfp.write(res['data'])
             else:
@@ -3468,7 +3456,7 @@ def convert_bookmark_set(
     Parameters
     ----------
         bookmark_set: bookmark set
-        export_type: one of supported type: markdown, html, org, xbel, rss, csv, txt
+        export_type: one of supported type: markdown, html, org, XBEL
         old: cached values of deleted records/replaced URLs to save
 
     Returns
@@ -3476,7 +3464,7 @@ def convert_bookmark_set(
         converted data and count of converted bookmark set
     """
     import html
-    assert export_type in ['markdown', 'html', 'org', 'xbel', 'rss', 'csv', 'txt']
+    assert export_type in ['markdown', 'html', 'org', 'xbel', 'rss']
     #  compatibility
     resultset = bookmark_vars(bookmark_set)
     old = old or {}
@@ -3507,6 +3495,7 @@ def convert_bookmark_set(
             out += convert_tags_to_org_mode_tags(row.tags_raw)
             count += 1
     elif export_type == 'xbel':
+        timestamp = str(int(time.time()))
         out = (
             '<?xml version="1.0" encoding="UTF-8"?>\n'
             '<!DOCTYPE xbel PUBLIC \
@@ -3571,22 +3560,6 @@ def convert_bookmark_set(
             count += 1
 
         out += '    </DL><p>\n</DL><p>'
-    elif export_type == 'csv':
-        import csv
-        import io
-
-        buf = io.StringIO()
-        writer = csv.writer(buf, lineterminator='\n')
-        writer.writerow(['url', 'title', 'tags', 'desc'])
-        for row in resultset:
-            writer.writerow([row.url, title(row), row.tags, row.desc or ''])
-            count += 1
-
-        out = buf.getvalue()
-    elif export_type == 'txt':
-        for row in resultset:
-            out += row.url + '\n'
-            count += 1
 
     return {'data': out, 'count': count}
 
@@ -6047,9 +6020,6 @@ POSITIONAL ARGUMENTS:
                          export Orgfile, if file ends with '.org'
                          format: *[[url][title]] :tags:
                          export rss feed if file ends with '.rss'/'.atom'
-                         export CSV, if file ends with '.csv'
-                         columns: url, title, tags, desc
-                         export plain URL list, if file ends with '.txt'
                          export buku DB, if file ends with '.db'
                          combines with search results, if opted
     -i, --import file    import bookmarks from file

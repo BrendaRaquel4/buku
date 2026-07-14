@@ -3506,7 +3506,6 @@ def convert_bookmark_set(
             out += convert_tags_to_org_mode_tags(row.tags_raw)
             count += 1
     elif export_type == 'xbel':
-        timestamp = str(int(time.time()))
         out = (
             '<?xml version="1.0" encoding="UTF-8"?>\n'
             '<!DOCTYPE xbel PUBLIC \

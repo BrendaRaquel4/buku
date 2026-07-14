@@ -18,7 +18,7 @@ import yaml
 from hypothesis import example, given, settings
 from hypothesis import strategies as st
 
-from buku import PERMANENT_REDIRECTS, BukuDb, FetchResult, BookmarkVar, bookmark_vars, parse_tags, prompt
+from buku import PERMANENT_REDIRECTS, BukuDb, FetchResult, BookmarkVar, bookmark_vars, parse_tags, prompt, show_taglist
 from tests.util import mock_fetch, _add_rec, _tagset
 
 
@@ -123,6 +123,13 @@ class TestBukuDb(unittest.TestCase):
                                 os.path.join(home, "AppData", "Roaming", "buku"))
         dbdir_relative_expected = os.path.abspath(".")
 
+        # explicit override takes precedence over everything else
+        os.environ["BUKU_DEFAULT_DBDIR"] = "relative_override_dir"
+        try:
+            self.assertEqual(os.path.abspath("relative_override_dir"), BukuDb.get_default_dbdir())
+        finally:
+            os.environ.pop("BUKU_DEFAULT_DBDIR")
+
         # desktop linux
         self.assertEqual(dbdir_expected, BukuDb.get_default_dbdir())
 
@@ -191,6 +198,15 @@ class TestBukuDb(unittest.TestCase):
         # asserting None is returned for nonexistent url
         idx_from_db = self.bdb.get_rec_id("http://nonexistent.url")
         self.assertIsNone(idx_from_db)
+
+    def test_get_rec_ids(self):
+        for bookmark in self.bookmarks:
+            _add_rec(self.bdb, *bookmark)
+        # asserting empty input returns empty list without touching the DB
+        self.assertEqual([], self.bdb.get_rec_ids([]))
+        urls = [self.bookmarks[0][0], self.bookmarks[2][0], "http://nonexistent.url"]
+        ids = self.bdb.get_rec_ids(urls)
+        self.assertEqual({1, 3}, set(ids))
 
     def test_add_rec(self):
         for bookmark in self.bookmarks:
@@ -713,6 +729,27 @@ class TestBukuDb(unittest.TestCase):
         with mock.patch("builtins.input", return_value="n"):
             self.assertFalse(self.bdb.delete_rec(0))
 
+    def test_delete_resultset(self):
+        for bookmark in self.bookmarks:
+            _add_rec(self.bdb, *bookmark)
+        results = self.bdb.get_rec_all()[:2]  # first two records
+        self.assertTrue(self.bdb.delete_resultset(results))
+        remaining = self.bdb.get_rec_all()
+        self.assertEqual(len(self.bookmarks) - 2, len(remaining))
+        deleted_urls = {r.url for r in results}
+        self.assertFalse(deleted_urls & {r.url for r in remaining})
+
+    def test_delete_resultset_no(self):
+        _add_rec(self.bdb, *self.bookmarks[0])
+        self.bdb.chatty = True
+        try:
+            with mock.patch("builtins.input", return_value="n"):
+                self.assertFalse(self.bdb.delete_resultset(self.bdb.get_rec_all()))
+            # nothing should have been deleted
+            self.assertEqual(1, len(self.bdb.get_rec_all()))
+        finally:
+            self.bdb.chatty = False
+
     def test_cleardb(self):
         # adding bookmarks
         _add_rec(self.bdb, *self.bookmarks[0])
@@ -721,6 +758,31 @@ class TestBukuDb(unittest.TestCase):
             self.bdb.cleardb()
         # assert table has been dropped
         assert self.bdb.get_rec_by_id(0) is None
+
+    def test_get_tag_all(self):
+        # empty DB
+        self.assertEqual(([], {}), self.bdb.get_tag_all())
+
+        for bookmark in self.bookmarks:
+            _add_rec(self.bdb, *bookmark)
+        unique_tags, dic = self.bdb.get_tag_all()
+        self.assertEqual(unique_tags, sorted(unique_tags))
+        for tag in unique_tags:
+            self.assertIn(tag, dic)
+            self.assertGreater(dic[tag], 0)
+
+    def test_get_tagstr_from_taglist(self):
+        taglist = ["bar", "baz", "foo"]
+        # single index
+        self.assertEqual(",bar,", self.bdb.get_tagstr_from_taglist(["1"], taglist))
+        # ascending range
+        self.assertEqual(",bar,baz,", self.bdb.get_tagstr_from_taglist(["1-2"], taglist))
+        # descending range gets normalized
+        self.assertEqual(",bar,baz,", self.bdb.get_tagstr_from_taglist(["2-1"], taglist))
+        # multiple selectors combined
+        self.assertEqual(",bar,foo,", self.bdb.get_tagstr_from_taglist(["1", "3"], taglist))
+        # non-index token is ignored
+        self.assertEqual(",", self.bdb.get_tagstr_from_taglist(["notanumber"], taglist))
 
     def test_replace_tag(self):
         indices = []
@@ -1075,6 +1137,13 @@ def test_update_rec_fetch(bukuDb, caplog, url_in, title_in, tags_in, url_redirec
              '        <content type="html"> <![CDATA[ <p>The official home...</p> ]]> </content>',
              '    </entry>',
              '</feed>']),
+    ('csv', ['url,title,tags,desc',
+             'http://custom.url,Fetched Title (DELETED),,Fetched description.',
+             'https://www.wikipedia.org,Wikipedia (OLD URL = http://wikipedia.net),http:301,Wikipedia is a free...',
+             'https://python.org/notfound,Welcome to Python.org,http:404,The official home...']),
+    ('txt', ['http://custom.url',
+             'https://www.wikipedia.org',
+             'https://python.org/notfound']),
     ('atom', ['<feed xmlns="http://www.w3.org/2005/Atom">',
               '    <title>Bookmarks</title>',
               '    <generator uri="https://github.com/jarun/buku">buku</generator>',
@@ -1211,6 +1280,14 @@ def test_print_rec(bukuDb, kwargs, rec, exp_res, tmp_path, caplog):
         _add_rec(bdb, *rec)
     # run the function
     assert (bdb.print_rec(**kwargs), caplog.record_tuples) == exp_res
+
+
+def test_show_taglist_empty(capsys, bukuDb):
+    bdb = bukuDb()
+    show_taglist(bdb)
+    out, err = capsys.readouterr()
+    assert out == "0 tags\n"
+    assert err == ""
 
 
 def test_list_tags(capsys, bukuDb):

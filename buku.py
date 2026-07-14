@@ -549,6 +549,7 @@ class BukuDb:
         enc_exists = os.path.exists(dbfile + '.enc')
 
         if db_exists and not enc_exists:
+            # Banco normal existe e nao esta criptografado; fluxo segue normalmente
             pass
         elif enc_exists and not db_exists:
             LOGERR('Unlock database first')

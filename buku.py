@@ -70,6 +70,7 @@ __license__ = 'GPLv3'
 # Global variables
 INTERRUPTED = False  # Received SIGINT
 DELIM = ','  # Delimiter used to store tags in DB
+DEFAULT_DB_FILENAME = 'bookmarks.db'  # Default database filename
 SKIP_MIMES = {'.pdf', '.txt'}
 PROMPTMSG = 'buku (? for help): '  # Prompt message string
 
@@ -256,7 +257,7 @@ class BukuCrypt:
             raise RuntimeError('Iterations must be >= 1')
 
         self.iterations, self.password, self.replace = iterations, password, replace
-        self.dbfile = dbfile or os.path.join(BukuDb.get_default_dbdir(), 'bookmarks.db')
+        self.dbfile = dbfile or os.path.join(BukuDb.get_default_dbdir(), DEFAULT_DB_FILENAME)
         self.encfile = encfile or (self.dbfile + '.enc')
 
         self._db_exists = os.path.exists(self.dbfile)
@@ -531,7 +532,7 @@ class BukuDb:
 
         if not dbfile:
             dbpath = BukuDb.get_default_dbdir()
-            filename = 'bookmarks.db'
+            filename = DEFAULT_DB_FILENAME
             dbfile = os.path.join(dbpath, filename)
         else:
             dbfile = os.path.abspath(dbfile)
@@ -4720,7 +4721,7 @@ def prompt(obj, results, noninteractive=False, deep=False, listtags=False, sugge
 
         try:
             prompt_suffix = ''
-            if bdb.dbfile != os.path.realpath(os.path.join(BukuDb.get_default_dbdir(), 'bookmarks.db')):
+            if bdb.dbfile != os.path.realpath(os.path.join(BukuDb.get_default_dbdir(), DEFAULT_DB_FILENAME)):
                 prompt_suffix = (f'[{bdb.dbname}] ' if not bdb.colorize else
                                  f'\001\x1b[7\002m[{bdb.dbname}]\001\x1b[0m\002 ')
             nav = read_in(PROMPTMSG + prompt_suffix)
@@ -6203,7 +6204,7 @@ POSITIONAL ARGUMENTS:
     # Fallback to prompt if no arguments
     if args._passed <= {'nostdin', 'db'}:
         try:
-            _db = _db or os.path.join(BukuDb.get_default_dbdir(), 'bookmarks.db')
+            _db = _db or os.path.join(BukuDb.get_default_dbdir(), DEFAULT_DB_FILENAME)
             if not os.path.exists(_db):
                 print(f'DB file is being created at {_db}')  # not printed without chatty param
             bdb = BukuDb(dbfile=_db, default_scheme=args.default_scheme[0])

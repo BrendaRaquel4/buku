@@ -75,7 +75,7 @@ PROMPTMSG = 'buku (? for help): '  # Prompt message string
 
 strip_delim = lambda s, delim=DELIM, sub=' ': str(s).replace(delim, sub)
 taglist = lambda ss: sorted(set(s.lower().strip() for s in ss if (s or '').strip()))
-parse_order = lambda order: [s for ss in order for s in re.split(r'\s*,\s*', ss.strip()) if s]
+parse_order = lambda order: [s.strip() for ss in order for s in ss.split(',') if s.strip()]
 like_escape = lambda s, c='`': s.replace(c, c+c).replace('_', c+'_').replace('%', c+'%')
 split_by_marker = lambda s: re.split(r'\s+(?=[.:>#*])', s)
 

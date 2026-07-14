@@ -7,7 +7,6 @@
 
 _buku () {
     COMPREPLY=()
-    local IFS=$' \n'
     local cur=$2 prev=$3
     local -a opts opts_with_args
     opts=(

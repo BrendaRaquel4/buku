@@ -99,6 +99,22 @@ def test_is_ignored_mime(url, exp_res):
     assert exp_res == buku.is_ignored_mime(url)
 
 
+@pytest.mark.parametrize(
+    "tagstr, exp_res",
+    [
+        ("", False),
+        (None, False),
+        ("tag1,tag2,tag3", False),  # 3 words, 3 commas -> ratio 1
+        ("this is a long sentence used as a single tag", True),  # many words, 1 comma
+    ],
+)
+def test_is_unusual_tag(tagstr, exp_res):
+    """test func."""
+    import buku
+
+    assert exp_res == buku.is_unusual_tag(tagstr)
+
+
 def test_gen_headers():
     """test func."""
     import buku
@@ -338,6 +354,9 @@ def test_check_upstream_release(status_code, latest_release):
     [
         ("cat.y", "catty", True),
         ("cat.y", "caty", False),
+        (None, "caty", False),
+        ("cat.y", None, False),
+        (None, None, False),
     ],
 )
 def test_regexp(exp, item, exp_res):
@@ -1159,3 +1178,55 @@ def test_SortKey():
 
     custom_order = lambda s: (SortKey(len(s), ascending=False), SortKey(s, ascending=True))
     assert sorted(['foo', 'bar', 'baz', 'quux'], key=custom_order) == ['quux', 'bar', 'baz', 'foo']
+
+
+def test_gen_auto_tag(monkeypatch):
+    """test func."""
+    import buku
+    import time as time_module
+
+    monkeypatch.setattr(
+        buku.time, "localtime", lambda: time_module.struct_time((2024, 3, 5, 0, 0, 0, 0, 0, 0))
+    )
+    assert buku.gen_auto_tag() == "2024Mar05"
+
+
+def test_tnyfy_url_deprecated():
+    """test func."""
+    import buku
+
+    with pytest.warns(DeprecationWarning):
+        assert buku.BukuDb.tnyfy_url(mock.Mock()) is None
+
+
+def test_write_string_to_file(tmp_path):
+    """test func."""
+    import buku
+
+    filepath = str(tmp_path / "out.txt")
+    buku.write_string_to_file("hello world", filepath)
+    with open(filepath, encoding="utf-8") as f:
+        assert f.read() == "hello world"
+
+
+def test_write_string_to_file_error(tmp_path):
+    """test func."""
+    import buku
+
+    # writing to a path that is a directory raises, and should be caught/logged, not propagated
+    buku.write_string_to_file("hello world", str(tmp_path))
+
+
+@pytest.mark.parametrize("single_record", [False, True])
+def test_print_json_safe(capsys, single_record):
+    """test func."""
+    import buku
+
+    bms = [(1, "http://example.com", "Example", ",foo,", "desc", 0)]
+    buku.print_json_safe(bms, single_record=single_record)
+    out = capsys.readouterr().out
+    data = json.loads(out)
+    if single_record:
+        assert data["uri"] == "http://example.com"
+    else:
+        assert data[0]["uri"] == "http://example.com"

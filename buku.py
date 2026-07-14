@@ -141,7 +141,7 @@ SCHEME_HTTP = 'http'
 IntSet: TypeAlias = Set[int] | range
 Ints: TypeAlias = Sequence[int] | IntSet
 IntOrInts: TypeAlias = int | Ints
-_T = TypeVar('T')  # pylint: disable=typevar-name-mismatch
+_T = TypeVar('_T')
 Values: TypeAlias = Sequence[_T] | Set[_T]
 
 # Set up logging

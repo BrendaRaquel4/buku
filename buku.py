@@ -630,9 +630,17 @@ class BukuDb:
     def _order(self, fields=['+id'], ignore_case=True) -> str:
         """Converts field list to SQL 'ORDER BY' parameters. (See also BukuDb._ordering().)"""
         text_fields = (set() if not ignore_case else {'url', 'desc', 'metadata', 'tags'})
-        get = lambda field: ("tags LIKE '%,{0},%'".format(field[1:].replace("'", "''")) if field.startswith('#') else
-                             'LOWER(NETLOC(url))' if field == 'netloc' else field if field not in text_fields else f'LOWER({field})')
-        return ', '.join(f'{get(field)} {"ASC" if direction else "DESC"}' for field, direction in self._ordering(fields))
+        
+        def get_field_sql(field):
+            if field.startswith('#'):
+                return "tags LIKE '%,{0},%'".format(field[1:].replace("'", "''"))
+            if field == 'netloc':
+                return 'LOWER(NETLOC(url))'
+            if field not in text_fields:
+                return field
+            return f'LOWER({field})'
+
+        return ', '.join(f'{get_field_sql(field)} {"ASC" if direction else "DESC"}' for field, direction in self._ordering(fields))
 
     def get_rec_all(self, *, lock: bool = True, order: List[str] = ['id'], ignore_case: bool = True):
         """Get all the bookmarks in the database.

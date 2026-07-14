@@ -75,7 +75,7 @@ PROMPTMSG = 'buku (? for help): '  # Prompt message string
 
 strip_delim = lambda s, delim=DELIM, sub=' ': str(s).replace(delim, sub)
 taglist = lambda ss: sorted({s.lower().strip() for s in ss if (s or '').strip()})
-parse_order = lambda order: [s for ss in order for s in re.split(r'\s*,\s*', ss.strip()) if s]
+parse_order = lambda order: [s.strip() for ss in order for s in ss.split(',') if s.strip()]
 like_escape = lambda s, c='`': s.replace(c, c+c).replace('_', c+'_').replace('%', c+'%')
 split_by_marker = lambda s: re.split(r'\s+(?=[.:>#*])', s)
 
@@ -141,7 +141,7 @@ SCHEME_HTTP = 'http'
 IntSet: TypeAlias = Set[int] | range
 Ints: TypeAlias = Sequence[int] | IntSet
 IntOrInts: TypeAlias = int | Ints
-_T = TypeVar('T')  # pylint: disable=typevar-name-mismatch
+_T = TypeVar('_T')
 Values: TypeAlias = Sequence[_T] | Set[_T]
 
 # Set up logging
@@ -249,7 +249,7 @@ class BukuCrypt:
         except ImportError as e:
             raise RuntimeError('cryptography lib(s) missing') from e
         self._sha256, self._default_backend = sha256, default_backend
-        self._Cipher, self._algorithms, self._modes = Cipher, algorithms, modes
+        self._cipher, self._algorithms, self._modes = Cipher, algorithms, modes
         self._getpass = (getpass if sys.stdin.isatty() else (lambda: sys.stdin.readline().rstrip('\n')))
 
         if iterations < 1:
@@ -314,7 +314,7 @@ class BukuCrypt:
             raise RuntimeError(e) from e
 
     def _cipher(self, key, iv):
-        return self._Cipher(self._algorithms.AES(key), self._modes.CBC(iv), backend=self._default_backend())
+        return self._cipher(self._algorithms.AES(key), self._modes.CBC(iv), backend=self._default_backend())
 
     def _key(self, salt):
         key = ('%s%s' % (self.password, salt.decode('utf-8', 'replace'))).encode('utf-8')

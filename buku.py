@@ -2720,7 +2720,7 @@ class BukuDb:
                 res = convert_bookmark_set(resultset, 'xbel', old)
                 count += res['count']
                 outfp.write(res['data'])
-            elif filepath.endswith('.rss') or filepath.endswith('.atom'):
+            elif filepath.endswith(('.rss', '.atom')):
                 res = convert_bookmark_set(resultset, 'rss', old)
                 count += res['count']
                 outfp.write(res['data'])

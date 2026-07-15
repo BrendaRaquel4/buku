@@ -36,7 +36,12 @@ jobs:
 
   sonarcloud:
     needs: pytest
-    if: ${{ !cancelled() && needs.pytest.result == 'success' }}
+    # Disabled for now: SonarCloud's "Automatic Analysis" is still enabled
+    # on the project, which conflicts with (and rejects) a CI-based scan
+    # from here. Flip this back to `!cancelled() && needs.pytest.result ==
+    # 'success'` once Automatic Analysis is turned off in the project's
+    # SonarCloud Administration > Analysis Method settings.
+    if: false
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

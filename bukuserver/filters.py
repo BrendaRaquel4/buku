@@ -4,6 +4,10 @@ from flask_admin.model import filters
 from bukuserver import _l, _key
 
 
+IN_LIST_TEXT = 'in list'
+NOT_IN_LIST_TEXT = 'not in list'
+
+
 class BookmarkField(Enum):
     ID = 0
     URL = 1
@@ -64,8 +68,8 @@ class FilterType(Enum):
     NOT_CONTAINS = {'func': not_contains_func, 'text': _l('not contains')}
     GREATER = {'func': greater_func, 'text': _l('greater than')}
     SMALLER = {'func': smaller_func, 'text': _l('smaller than')}
-    IN_LIST = {'func': in_list_func, 'text': _l('in list')}
-    NOT_IN_LIST = {'func': not_in_list_func, 'text': _l('not in list')}
+    IN_LIST = {'func': in_list_func, 'text': _l(IN_LIST_TEXT)}
+    NOT_IN_LIST = {'func': not_in_list_func, 'text': _l(NOT_IN_LIST_TEXT)}
     TOP_X = {'func': top_x_func, 'text': _l('top X')}
     BOTTOM_X = {'func': bottom_x_func, 'text': _l('bottom X')}
 
@@ -100,7 +104,7 @@ class TagBaseFilter(BaseFilter):
         else:
             self.apply_func = apply_func
             self.operation_text = operation_text
-        if _key(self.operation_text) in ('in list', 'not in list'):
+        if _key(self.operation_text) in (IN_LIST_TEXT, NOT_IN_LIST_TEXT):
             super().__init__(name, options, data_type='select2-tags')
         else:
             super().__init__(name, options, data_type)
@@ -186,13 +190,13 @@ class BookmarkBaseFilter(BaseFilter):
         else:
             self.apply_func = apply_func
             self.operation_text = operation_text
-        if _key(self.operation_text) in ('in list', 'not in list'):
+        if _key(self.operation_text) in (IN_LIST_TEXT, NOT_IN_LIST_TEXT):
             super().__init__(name, options, data_type='select2-tags')
         else:
             super().__init__(name, options, data_type)
 
     def clean(self, value):
-        on_list = _key(self.operation_text) in ('in list', 'not in list')
+        on_list = _key(self.operation_text) in (IN_LIST_TEXT, NOT_IN_LIST_TEXT)
         if on_list and self.name == BookmarkField.ID.name.lower():
             value = [int(v.strip()) for v in value.split(',') if v.strip()]
         elif on_list:

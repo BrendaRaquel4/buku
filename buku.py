@@ -71,6 +71,7 @@ __license__ = 'GPLv3'
 INTERRUPTED = False  # Received SIGINT
 DELIM = ','  # Delimiter used to store tags in DB
 DEFAULT_DB_FILENAME = 'bookmarks.db'  # Default database filename
+EMPTY_PASSWORD_MSG = 'Empty password'
 SKIP_MIMES = {'.pdf', '.txt'}
 PROMPTMSG = 'buku (? for help): '  # Prompt message string
 
@@ -272,10 +273,10 @@ class BukuCrypt:
         if not self.password:
             self.password = self._getpass()
             if not self.password:
-                raise RuntimeError('Empty password')
+                raise RuntimeError(EMPTY_PASSWORD_MSG)
             passconfirm = self._getpass()
             if not passconfirm:
-                raise RuntimeError('Empty password')
+                raise RuntimeError(EMPTY_PASSWORD_MSG)
             if self.password != passconfirm:
                 raise RuntimeError('Passwords do not match')
 
@@ -294,7 +295,7 @@ class BukuCrypt:
 
         self.password = self.password or self._getpass()
         if not self.password:
-            raise RuntimeError('Empty password')
+            raise RuntimeError(EMPTY_PASSWORD_MSG)
 
         try:
             enchash = self._decrypt()

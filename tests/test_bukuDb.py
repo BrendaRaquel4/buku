@@ -199,6 +199,18 @@ class TestBukuDb(unittest.TestCase):
         idx_from_db = self.bdb.get_rec_id("http://nonexistent.url")
         self.assertIsNone(idx_from_db)
 
+    def test_get_rec_id_case_insensitive(self):
+        _add_rec(self.bdb, 'http://example.com', 'Example')
+        self.assertEqual(1, self.bdb.get_rec_id('http://Example.com'))
+        self.assertEqual(1, self.bdb.get_rec_id('HTTP://EXAMPLE.COM'))
+
+    def test_add_rec_rejects_duplicate_case_insensitive(self):
+        first_id = _add_rec(self.bdb, 'http://example.com', 'Example')
+        self.assertIsNotNone(first_id)
+        second_id = _add_rec(self.bdb, 'http://Example.com', 'Example Again')
+        self.assertIsNone(second_id)
+        self.assertEqual(1, len(self.bdb.get_rec_all()))
+
     def test_get_rec_ids(self):
         for bookmark in self.bookmarks:
             _add_rec(self.bdb, *bookmark)

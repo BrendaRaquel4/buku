@@ -697,6 +697,9 @@ class BukuDb:
     def get_rec_id(self, url: str, *, lock: bool = True):
         """Check if URL already exists in DB.
 
+        Comparison is case-insensitive, so 'http://Example.com' and
+        'http://example.com' are treated as the same URL.
+
         Parameters
         ----------
         url : str
@@ -710,7 +713,7 @@ class BukuDb:
             DB index, or None if URL not found in DB.
         """
 
-        row = self._fetch_first('SELECT * FROM bookmarks WHERE url = ?', url, lock=lock)
+        row = self._fetch_first('SELECT * FROM bookmarks WHERE url = ? COLLATE NOCASE', url, lock=lock)
         return row and row.id
 
     def get_rec_ids(self, urls: Values[str], *, lock: bool = True):
